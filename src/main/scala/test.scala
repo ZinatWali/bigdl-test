@@ -61,7 +61,6 @@ object TestRef{
       .withColumn("V19_", when(col("V19") > 1.5 -3, 1).otherwise(0))
       .withColumn("V21_", when(col("V21") > 0.6, 1).otherwise(0))
       .withColumn("Class", when(col("Class") === 0, 1).otherwise(2))
-//      .withColumn("Normal", when(col("Class") === 0, 1).otherwise(1))
       .withColumnRenamed("Class", "Fraud")
 
     val fraud = enrichedCSV.filter("Fraud == 1").count()
@@ -72,15 +71,6 @@ object TestRef{
 
     var Array(xTrain, xTest) = enrichedCSV.randomSplit(Array(0.8, 0.2))
 
-//    val xTrainInterim = xTrainOrig.orderBy(rand)
-//    val xTestInterim = xTestOrig.orderBy(rand)
-//
-//    var xTrain = xTrainInterim
-//    var xTest = xTestInterim
-
-//    xTrain.printSchema()
-
-
     val labels = Array("Fraud")
     val features = xTrain.columns.filterNot(labels.contains(_))
 
@@ -90,8 +80,6 @@ object TestRef{
       if(x != "Fraud" && x != "Normal") {
         val meanFeat = enrichedCSV.select(avg(x)).first().get(0)
         val stdFeat = enrichedCSV.select(stddev(x)).first().get(0)
-
-//        println(meanFeat)
 
         xTrain = xTrain.withColumn(x, (col(x) - meanFeat) / stdFeat)
         xTest = xTest.withColumn(x, (col(x) - meanFeat) / stdFeat)
@@ -157,19 +145,6 @@ object TestRef{
       .add(Linear(hidden_nodes4, 2))
       .add(SoftMax())
 
-//    model.add(Reshape(Array(1, 6, 6)))
-//      .add(SpatialConvolution(1, 6, 5, 5))
-//      .add(Tanh())
-//      .add(SpatialMaxPooling(2, 2, 2, 2))
-//      .add(Tanh())
-//      .add(SpatialConvolution(6, 12, 5, 5))
-//      .add(SpatialMaxPooling(2, 2, 2, 2))
-//      .add(Reshape(Array(12 * 4 * 4)))
-//      .add(Linear(12 * 4 * 4, 100))
-//      .add(Tanh())
-//      .add(Linear(100, 2))
-//      .add(LogSoftMax())
-
     val training_epochs = 10
     val training_dropout = 0.9
     val display_step = 1
@@ -195,23 +170,16 @@ object TestRef{
 
     val f = samples.filter(x => x.label() == Tensor(T(2f)))
     val nf = samples.filter(x => x.label() == Tensor(T(1f)))
-    val toPredict = ss.sparkContext.parallelize(f.take(10).union(nf.take(10)))
-    println(s"Total frauds in input ${toPredict.count()}")
 
-    val predictResults = trainedModel.predictClass(toPredict)
-//    val ResultsZero = predictResult.filter(i => i == Tensor(T(0f))).count()
-//    val p = predictResult.take(50)
+    val targetedFraud = trainedModel.predictClass(ss.sparkContext.parallelize(f.collect()))
+    val errorWithinFraud = (targetedFraud.filter(x => x == 1).count() / f.count().toDouble)*100
 
-    println("samples")
+    val targetedNormal = trainedModel.predictClass(ss.sparkContext.parallelize(nf.collect()))
+    val errorWithinNormal = (targetedNormal.filter(x => x == 2).count() / nf.count().toDouble)*100
 
-    toPredict.take(50).foreach(x => {
-      println(x.label())
-    })
-
-    println(s"predict predict:")
-
-    for(i <- predictResults){
-      println(i)
-    }
-  }
+    targetedFraud.take(10).foreach(println)
+    println(s"predict fraud: $errorWithinFraud")
+    targetedNormal.take(10).foreach(println)
+    println(s"predict normal:$errorWithinNormal")
+ }
 }

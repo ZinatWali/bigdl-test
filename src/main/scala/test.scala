@@ -1,7 +1,6 @@
 package org.simple.stuff
 
 import breeze.linalg.DenseVector
-import com.intel.analytics.bigdl.Module
 import com.intel.analytics.bigdl.dataset.Sample
 import com.intel.analytics.bigdl.nn._
 import com.intel.analytics.bigdl.tensor.Tensor
@@ -10,7 +9,6 @@ import com.intel.analytics.bigdl.utils.{Engine, T}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, Row, SparkSession}
 import com.intel.analytics.bigdl._
-import com.intel.analytics.bigdl.models.lenet.LeNet5
 import com.intel.analytics.bigdl.optim._
 import org.apache.spark.rdd.RDD
 
@@ -25,7 +23,6 @@ object TestRef{
     val ss = SparkSession.builder().config(conf).getOrCreate()
     import ss.implicits._
 
-
     Engine.init
 
     val csv = ss
@@ -34,10 +31,7 @@ object TestRef{
       .option("header", "true")
       .option("inferSchema", "true")
       .csv("creditcard.csv")
-//      .limit(10000)
       .cache()
-
-//    csv.printSchema()
 
     val colsToRemove = Seq("V28", "V27", "V26", "V25", "V24", "V23", "V22", "V20", "V15", "V13", "V8")
     val leanCSV = csv.select(csv.columns.filter(colName => !colsToRemove.contains(colName)).map(colName => new Column(colName)):_*)
@@ -73,7 +67,6 @@ object TestRef{
 
     val labels = Array("Fraud")
     val features = xTrain.columns.filterNot(labels.contains(_))
-
 
     for(x <- features)
     {
@@ -121,7 +114,6 @@ object TestRef{
           Sample(feats, labs)
         })
       })
-
 
     val input_nodes = 36
 
@@ -178,8 +170,8 @@ object TestRef{
     val errorWithinNormal = (targetedNormal.filter(x => x == 2).count() / nf.count().toDouble)*100
 
     targetedFraud.take(10).foreach(println)
-    println(s"predict fraud: $errorWithinFraud")
+    println(s"predict fraud: $errorWithinFraud%")
     targetedNormal.take(10).foreach(println)
-    println(s"predict normal:$errorWithinNormal")
+    println(s"predict normal:$errorWithinNormal%")
  }
 }
